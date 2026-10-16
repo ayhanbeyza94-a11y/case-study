@@ -1,0 +1,63 @@
+@import "tailwindcss";
+
+/* Tokens mirror src/design-system/tokens.json. Change both together. */
+@theme {
+  --font-sans: "Public Sans", system-ui, sans-serif;
+
+  --color-ink: #1b2326;
+  --color-ink-muted: #55636a;
+  --color-line: #cbd3d1;
+  --color-line-strong: #8a9894;
+  --color-canvas: #eef1f0;
+  --color-surface: #ffffff;
+  --color-petrol: #12424f;
+  --color-petrol-hover: #0c2f39;
+  --color-petrol-tint: #e2ecee;
+  --color-risk-low: #1e6b4f;
+  --color-risk-low-tint: #e3f1ea;
+  --color-risk-medium: #8a5300;
+  --color-risk-medium-tint: #fbefd9;
+  --color-risk-high: #a3202e;
+  --color-risk-high-tint: #f9e3e5;
+
+  --text-xs: 0.8125rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.75rem;
+  --text-amount: 2.25rem;
+
+  --radius-control: 4px;
+  --radius-panel: 6px;
+}
+
+@layer base {
+  html {
+    background: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-feature-settings: "tnum" 1;
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    margin: 0;
+    line-height: 1.5;
+  }
+  h1, h2, h3 {
+    line-height: 1.25;
+    text-wrap: balance;
+  }
+  :focus-visible {
+    outline: 3px solid var(--color-petrol);
+    outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+  dialog::backdrop {
+    background: rgb(27 35 38 / 0.45);
+  }
+}
