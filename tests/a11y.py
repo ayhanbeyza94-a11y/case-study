@@ -13,6 +13,7 @@ PAGES = [
     ("A-01", "/requests?as=lena", None),
     ("A-02", "/requests/new?as=lena", None),
     ("A-02 errors", "/requests/new?as=lena", "submit"),
+    ("A-03 review", "/requests/new?as=lena", "review"),
     ("A-04", "/requests/PR-2026-0297?as=lena", None),
     ("A-05", "/approvals?as=markus", None),
     ("A-06", "/approvals/PR-2026-0322?as=markus", None),
@@ -21,6 +22,7 @@ PAGES = [
     ("B-02", "/suppliers/new?as=aylin", None),
     ("B-03", "/suppliers/SUP-0171?as=aylin", None),
     ("B-04", "/suppliers/SUP-0163?as=aylin", None),
+    ("B-05 clearance", "/suppliers/SUP-0163?as=aylin", "clearance"),
     ("C-01", "/audit?as=aylin", None),
     ("DS", "/design-system?as=aylin", None),
 ]
@@ -37,6 +39,20 @@ with sync_playwright() as p:
             page.wait_for_load_state("networkidle")
             if action == "submit":
                 page.get_by_role("button", name="Continue to review").click()
+            if action == "review":
+                page.get_by_label("What do you want to buy?").fill("Load-test licences")
+                page.get_by_label("Why does the team need it?").fill("Release 4.2 load test.")
+                page.get_by_label("Amount (EUR, net)").fill("27400")
+                page.get_by_label("Cost centre").select_option("CC-4100")
+                page.get_by_label("Supplier").select_option("SUP-0157")
+                page.get_by_role("button", name="Continue to review").click()
+            if action == "clearance":
+                page.get_by_label("Low risk").check()
+                page.get_by_label("Why are you changing the proposed level?").fill("Agencies confirmed minimum wage in writing.")
+                page.get_by_role("button", name="Send for clearance").click()
+                page.goto(f"{BASE}/#/suppliers/SUP-0163?as=jonas")
+                page.wait_for_timeout(300)
+                page.get_by_role("button", name="Clear supplier").first.wait_for()
             if action == "dialog":
                 page.get_by_role("button", name="Approve").click()
             page.wait_for_timeout(200)
