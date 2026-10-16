@@ -18,6 +18,7 @@ export interface RequestDraft {
   amount: number;
   costCentre: string;
   supplierId: string;
+  neededBy?: string;
 }
 
 type Action =
@@ -62,6 +63,7 @@ function reducer(s: State, a: Action): State {
         amount: a.draft.amount,
         costCentre: a.draft.costCentre,
         supplierId: a.draft.supplierId,
+        neededBy: a.draft.neededBy || undefined,
         requester: s.user,
         status: onHold ? "on-hold" : "in-review",
         createdOn: today(),

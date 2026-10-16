@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { COST_CENTRES, PEOPLE } from "../data/seed";
-import { buildRoute, formatDate, formatDateTime, formatEUR } from "../data/rules";
+import { buildRoute, daysUntil, formatDate, formatDateTime, formatEUR, neededByLabel } from "../data/rules";
 import { nextId, useStore, type RequestDraft } from "../data/store";
 import type { PurchaseRequest } from "../data/types";
 import {
@@ -91,6 +91,7 @@ function validate(d: RequestDraft): Errors {
   else if (d.amount > 500000) e.amount = "Requests over €500,000 go through the capital expenditure process, not Clearpath";
   if (!d.costCentre) e.costCentre = "Choose the cost centre that pays for this";
   if (!d.supplierId) e.supplierId = "Choose a supplier, or add a new one";
+  if (d.neededBy && daysUntil(d.neededBy) < 0) e.neededBy = "Choose today or a later date";
   return e;
 }
 
@@ -101,7 +102,7 @@ export function NewRequest() {
   const from = state.requests.find((r) => r.id === params.get("from"));
   const [draft, setDraft] = useState<RequestDraft>(
     from
-      ? { replaces: from.id, title: from.title, reason: from.reason, amount: from.amount, costCentre: from.costCentre, supplierId: from.supplierId }
+      ? { replaces: from.id, title: from.title, reason: from.reason, amount: from.amount, costCentre: from.costCentre, supplierId: from.supplierId, neededBy: from.neededBy }
       : { title: "", reason: "", amount: 0, costCentre: "", supplierId: "" },
   );
   const [errors, setErrors] = useState<Errors>({});
@@ -153,10 +154,10 @@ export function NewRequest() {
           {errorList.length > 0 && (
             <div ref={summaryRef} tabIndex={-1} className="outline-none">
               <Notice tone="error" title={`Fix ${errorList.length} ${errorList.length === 1 ? "problem" : "problems"} to continue`}>
-                <ul className="m-0 pl-5">
+                <ul className="m-0 pl-5 flex flex-col gap-1">
                   {errorList.map(([k, msg]) => (
                     <li key={k}>
-                      <a href={`#field-${k}`} onClick={(e) => { e.preventDefault(); document.querySelector<HTMLElement>(`[data-field="${k}"]`)?.focus(); }} className="underline">
+                      <a href={`#field-${k}`} onClick={(e) => { e.preventDefault(); document.querySelector<HTMLElement>(`[data-field="${k}"]`)?.focus(); }} className="underline inline-block py-0.5">
                         {msg}
                       </a>
                     </li>
@@ -206,6 +207,12 @@ export function NewRequest() {
             </Field>
           </div>
 
+          <Field label="Needed by" optional hint="Approvers see this date. Leave empty if there's no deadline." error={errors.neededBy}>
+            {({ id, describedBy, invalid }) => (
+              <TextInput id={id} type="date" data-field="neededBy" className="sm:max-w-56" aria-describedby={describedBy} aria-invalid={invalid} value={draft.neededBy ?? ""} onChange={(e) => set("neededBy", e.target.value)} />
+            )}
+          </Field>
+
           <Field
             label="Supplier"
             hint={
@@ -252,6 +259,7 @@ export function NewRequest() {
                 ["What", draft.title],
                 ["Why", draft.reason],
                 ["Amount", formatEUR(draft.amount)],
+                ["Needed by", draft.neededBy ? neededByLabel(draft.neededBy) : "No deadline"],
                 ["Cost centre", COST_CENTRES.find((c) => c.id === draft.costCentre)?.name ?? draft.costCentre],
                 [
                   "Supplier",
@@ -320,7 +328,18 @@ export function RequestDetail() {
   const changes = r.route.find((s) => s.decision === "changes-requested");
   const history = requestHistory(r, state.audit);
   if (next && (r.status === "in-review" || r.status === "second-review" || r.status === "on-hold")) {
-    history.push({ key: "next", when: "", who: PEOPLE[next.person].name, what: r.status === "on-hold" ? "Waiting for supplier clearance" : `Waiting for ${next.kind === "approval" ? "approval" : "second approval"}`, tone: "pending" });
+    // Fix from evaluation: an on-hold request waits on compliance, not on the approver.
+    history.push(
+      r.status === "on-hold" && sup
+        ? {
+            key: "next",
+            when: "",
+            who: `${PEOPLE[sup.onboardedBy].name}, compliance`,
+            what: sup.status === "awaiting-supplier" ? "Waiting for the supplier to answer the due-diligence questionnaire" : "Compliance is assessing the supplier",
+            tone: "pending",
+          }
+        : { key: "next", when: "", who: PEOPLE[next.person].name, what: `Waiting for ${next.kind === "approval" ? "approval" : "second approval"}`, tone: "pending" },
+    );
   }
   const isRequester = r.requester === state.user;
 
@@ -341,7 +360,10 @@ export function RequestDetail() {
         <div className="flex flex-col gap-6">
           {r.status === "on-hold" && (
             <Notice tone="warning" title="On hold until the supplier is cleared">
-              {sup?.name} is in due diligence ({sup?.status === "awaiting-supplier" ? "waiting for the supplier's answers" : "being reviewed by compliance"}). Nobody needs to do anything on this request yet; it moves to approval automatically.
+              {sup?.name} is in due diligence ({sup?.status === "awaiting-supplier" ? "waiting for the supplier's answers" : "being assessed by compliance"}). {sup && PEOPLE[sup.onboardedBy].name} owns this step. You don't need to do anything; the request moves to approval automatically.
+              {r.neededBy && daysUntil(r.neededBy) <= 14 && (
+                <span className="block mt-1 font-semibold">You need this by {formatDate(r.neededBy)}. If that's at risk, tell {sup && PEOPLE[sup.onboardedBy].name} now.</span>
+              )}
             </Notice>
           )}
           {r.status === "changes-requested" && changes && (
@@ -356,6 +378,7 @@ export function RequestDetail() {
               items={[
                 ["Why", r.reason],
                 ["Amount", formatEUR(r.amount)],
+                ["Needed by", r.neededBy ? neededByLabel(r.neededBy) : "No deadline"],
                 ["Cost centre", r.costCentre],
                 ["Requested by", `${PEOPLE[r.requester].name}, ${formatDate(r.createdOn)}`],
               ]}

@@ -135,7 +135,7 @@ const REQUEST_STATUS: Record<RequestStatus, { label: string; cls: string; shape:
 };
 export function RequestStatusTag({ status }: { status: RequestStatus }) {
   const s = REQUEST_STATUS[status];
-  return <span className={`${tagBase} ${s.cls}`}><Glyph shape={s.shape} />{s.label}</span>;
+  return <span className={`${tagBase} ${s.cls}`}><Glyph shape={s.shape} /><span className="sr-only">Request status: </span>{s.label}</span>;
 }
 
 const SUPPLIER_STATUS: Record<SupplierStatus, { label: string; cls: string; shape: Parameters<typeof Glyph>[0]["shape"] }> = {
@@ -147,7 +147,7 @@ const SUPPLIER_STATUS: Record<SupplierStatus, { label: string; cls: string; shap
 };
 export function SupplierStatusTag({ status }: { status: SupplierStatus }) {
   const s = SUPPLIER_STATUS[status];
-  return <span className={`${tagBase} ${s.cls}`}><Glyph shape={s.shape} />{s.label}</span>;
+  return <span className={`${tagBase} ${s.cls}`}><Glyph shape={s.shape} /><span className="sr-only">Supplier status: </span>{s.label}</span>;
 }
 
 /* ---------- Layout ---------- */
@@ -201,10 +201,12 @@ export function DescriptionList({ items }: { items: Array<[string, ReactNode]> }
 
 export function Notice({ tone = "info", title, children }: { tone?: "info" | "warning" | "error" | "success"; title: string; children?: ReactNode }) {
   const map = {
-    info: { cls: "border-petrol bg-petrol-tint", shape: "ring" as const, role: "status" },
-    warning: { cls: "border-risk-medium bg-risk-medium-tint", shape: "diamond" as const, role: "status" },
+    // Evaluation fix: only errors are live regions; other notices are static content,
+    // so they don't repeat what the toast already announced.
+    info: { cls: "border-petrol bg-petrol-tint", shape: "ring" as const, role: undefined },
+    warning: { cls: "border-risk-medium bg-risk-medium-tint", shape: "diamond" as const, role: undefined },
     error: { cls: "border-risk-high bg-risk-high-tint", shape: "cross" as const, role: "alert" },
-    success: { cls: "border-risk-low bg-risk-low-tint", shape: "circle" as const, role: "status" },
+    success: { cls: "border-risk-low bg-risk-low-tint", shape: "circle" as const, role: undefined },
   }[tone];
   return (
     <div role={map.role} className={`border-l-4 ${map.cls} rounded-[var(--radius-control)] px-4 py-3 text-sm`}>

@@ -62,6 +62,8 @@ export interface PurchaseRequest {
   amount: number;
   costCentre: string;
   supplierId: string;
+  /** Optional date the team needs it by; shown to approvers as urgency */
+  neededBy?: string;
   requester: PersonId;
   status: RequestStatus;
   createdOn: string;

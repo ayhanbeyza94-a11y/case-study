@@ -92,14 +92,14 @@ export function AppShell() {
               ))}
             </select>
           </div>
-          <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs">
-            <NavLink to="/screens" className="text-white/85 underline underline-offset-4 hover:text-white">
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+            <NavLink to="/screens" className="inline-flex items-center min-h-6 text-white/85 underline underline-offset-4 hover:text-white">
               Screen index
             </NavLink>
-            <NavLink to="/design-system" className="text-white/85 underline underline-offset-4 hover:text-white">
+            <NavLink to="/design-system" className="inline-flex items-center min-h-6 text-white/85 underline underline-offset-4 hover:text-white">
               Design system
             </NavLink>
-            <button type="button" onClick={() => dispatch({ type: "reset" })} className="text-white/85 underline underline-offset-4 hover:text-white">
+            <button type="button" onClick={() => dispatch({ type: "reset" })} className="inline-flex items-center min-h-6 text-white/85 underline underline-offset-4 hover:text-white">
               Reset data
             </button>
           </div>

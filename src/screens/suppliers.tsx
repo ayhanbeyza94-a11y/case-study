@@ -456,18 +456,36 @@ export function AuditLog() {
   const { state } = useStore();
   const [q, setQ] = useState("");
   const rows = [...state.audit].reverse().filter((e) => !q || `${e.target} ${e.action} ${e.reason ?? ""} ${e.actor}`.toLowerCase().includes(q.toLowerCase()));
+  const [copied, setCopied] = useState<string>();
+  const csv = () =>
+    ["time,actor,action,record,reason", ...state.audit.map((e) => [e.at, e.actor === "system" ? "Clearpath" : PEOPLE[e.actor].name, e.action, e.target, e.reason ?? ""].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","))].join("\n");
   const exportCsv = () => {
-    const csv = ["time,actor,action,record,reason", ...state.audit.map((e) => [e.at, e.actor === "system" ? "Clearpath" : PEOPLE[e.actor].name, e.action, e.target, e.reason ?? ""].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","))].join("\n");
-    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+    const url = URL.createObjectURL(new Blob([csv()], { type: "text/csv" }));
     const a = document.createElement("a");
     a.href = url;
     a.download = "clearpath-audit-log.csv";
     a.click();
     URL.revokeObjectURL(url);
   };
+  // Evaluation fix: file downloads are blocked in some embedded viewers, so offer a copy route too.
+  const copyCsv = async () => {
+    try {
+      await navigator.clipboard.writeText(csv());
+      setCopied("Audit log copied as CSV. Paste it into a spreadsheet.");
+    } catch {
+      setCopied("Copying isn't allowed here. Use Download CSV instead.");
+    }
+  };
   return (
     <>
-      <PageHeader title="Audit log" meta={<span>Read-only. Entries can't be edited or deleted and are kept for seven years.</span>} actions={<Button variant="secondary" onClick={exportCsv}>Export CSV</Button>} />
+      <PageHeader title="Audit log" meta={<span>Read-only. Entries can't be edited or deleted and are kept for seven years.</span>} actions={
+          <>
+            <Button variant="secondary" onClick={exportCsv}>Download CSV</Button>
+            <Button variant="quiet" onClick={copyCsv}>Copy as CSV</Button>
+          </>
+        }
+      />
+      {copied && <p role="status" className="text-sm m-0 mb-4">{copied}</p>}
       <div className="max-w-md mb-4">
         <Field label="Filter by record, action or reason">
           {({ id }) => <TextInput id={id} type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="e.g. PR-2026-0322" />}

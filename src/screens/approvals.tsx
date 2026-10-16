@@ -1,7 +1,7 @@
 import { useId, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { PEOPLE } from "../data/seed";
-import { formatDate, formatEUR } from "../data/rules";
+import { daysUntil, formatDate, formatEUR, neededByLabel } from "../data/rules";
 import { useStore } from "../data/store";
 import {
   Button,
@@ -29,6 +29,7 @@ export function ApprovalsInbox() {
     const step = r.route.find((s) => !s.decision);
     return step?.person === state.user && (r.status === "in-review" || r.status === "second-review");
   });
+  waiting.sort((a, b) => (a.neededBy ?? "9999").localeCompare(b.neededBy ?? "9999"));
   const decided = state.requests.filter((r) => r.route.some((s) => s.person === state.user && s.decision));
   const sup = (id: string) => state.suppliers.find((s) => s.id === id);
 
@@ -39,7 +40,7 @@ export function ApprovalsInbox() {
       {waiting.length === 0 ? (
         <EmptyState title="You're up to date">New requests that need your approval appear here, and you'll get an email.</EmptyState>
       ) : (
-        <Table caption="Requests waiting for your decision" head={["Request", "Requested by", "Amount", "Supplier risk", "Your step"]}>
+        <Table caption="Requests waiting for your decision" head={["Request", "Requested by", "Amount", "Needed by", "Supplier risk", "Your step"]}>
           {waiting.map((r) => {
             const s = sup(r.supplierId);
             const step = r.route.find((x) => !x.decision)!;
@@ -55,6 +56,9 @@ export function ApprovalsInbox() {
                 </td>
                 <td>{PEOPLE[r.requester].name}</td>
                 <td className="text-right whitespace-nowrap font-semibold">{formatEUR(r.amount)}</td>
+                <td className={`whitespace-nowrap ${r.neededBy && daysUntil(r.neededBy) <= 14 ? "font-semibold text-risk-medium" : ""}`}>
+                  {r.neededBy ? formatDate(r.neededBy) : "No deadline"}
+                </td>
                 <td>
                   <RiskTag risk={s?.risk} />
                 </td>
@@ -148,64 +152,33 @@ export function ApprovalDetail() {
         }
       />
       <div className="grid gap-6 lg:grid-cols-[1fr_360px] items-start">
-        <div className="flex flex-col gap-6 order-2 lg:order-1">
-          <Panel title="Request">
-            <DescriptionList
-              items={[
-                ["What", r.title],
-                ["Why", r.reason],
-                ["Cost centre", r.costCentre],
-                ["Requested by", `${PEOPLE[r.requester].name}, ${PEOPLE[r.requester].role}`],
-              ]}
-            />
-          </Panel>
-          {sup && (
-            <Panel title="Supplier due diligence">
-              <div className="flex flex-col gap-4 text-sm">
-                <DescriptionList
-                  items={[
-                    ["Supplier", <Link to={`/suppliers/${sup.id}`} className="text-petrol underline underline-offset-4">{sup.name}</Link>],
-                    ["Country, industry", `${sup.country}, ${sup.industry}`],
-                    ["Assessed", sup.assessedOn ? `${formatDate(sup.assessedOn)} by compliance` : "Not yet"],
-                    ["Re-assessment due", sup.reassessBy ? formatDate(sup.reassessBy) : "Not set"],
-                  ]}
-                />
-                {sup.riskReason && (
-                  <div>
-                    <p className="m-0 font-semibold">Why this risk level</p>
-                    <p className="m-0">{sup.riskReason}</p>
-                  </div>
-                )}
-                {sup.mitigation && (
-                  <div>
-                    <p className="m-0 font-semibold">Open mitigation</p>
-                    <p className="m-0">
-                      {sup.mitigation.measure}. Owner {sup.mitigation.owner}, due {formatDate(sup.mitigation.due)}.
-                    </p>
-                  </div>
-                )}
-              </div>
-            </Panel>
-          )}
-          <Panel title="History">
-            <Timeline items={requestHistory(r, state.audit)} />
-          </Panel>
-        </div>
-
-        {/* The decision rail: amount, risk and four-eyes status in one place */}
-        <aside aria-label="Decision" className="order-1 lg:order-2 lg:sticky lg:top-6 bg-surface border-2 border-petrol rounded-[var(--radius-panel)]">
-          <div className="px-5 pt-5 pb-4 border-b border-line">
-            <p className="m-0 text-sm text-ink-muted">Amount (net)</p>
-            <p className="m-0 text-amount font-bold leading-tight">{formatEUR(r.amount)}</p>
-          </div>
-          <div className="px-5 py-4 border-b border-line flex flex-col gap-2">
-            <p className="m-0 text-sm text-ink-muted">Supplier</p>
-            <p className="m-0 font-semibold">{sup?.name}</p>
-            <div className="flex flex-wrap gap-2">
-              {sup && <SupplierStatusTag status={sup.status} />}
-              <RiskTag risk={sup?.risk} />
+        {/* The decision rail: amount, risk and four-eyes status in one place.
+            Evaluation fix: first in DOM order so keyboard, screen-reader and agent order
+            matches the mobile layout; placed in the right column on desktop via grid. */}
+        <aside aria-label="Decision" className="lg:col-start-2 lg:row-start-1 lg:sticky lg:top-6 bg-surface border-2 border-petrol rounded-[var(--radius-panel)]">
+          {/* Evaluation fix: label/value pairs as a definition list, not loose paragraphs */}
+          <dl className="m-0">
+            <div className="px-5 pt-5 pb-4 border-b border-line">
+              <dt className="text-sm text-ink-muted">Amount (net)</dt>
+              <dd className="m-0 text-amount font-bold leading-tight">{formatEUR(r.amount)}</dd>
+              {r.neededBy && (
+                <>
+                  <dt className="text-sm text-ink-muted mt-2">Needed by</dt>
+                  <dd className={`m-0 text-sm ${daysUntil(r.neededBy) <= 14 ? "font-semibold text-risk-medium" : ""}`}>{neededByLabel(r.neededBy)}</dd>
+                </>
+              )}
             </div>
-          </div>
+            <div className="px-5 py-4 border-b border-line flex flex-col gap-2">
+              <dt className="text-sm text-ink-muted">Supplier</dt>
+              <dd className="m-0 flex flex-col gap-2">
+                <span className="font-semibold">{sup?.name}</span>
+                <span className="flex flex-wrap gap-2">
+                  {sup && <SupplierStatusTag status={sup.status} />}
+                  <RiskTag risk={sup?.risk} />
+                </span>
+              </dd>
+            </div>
+          </dl>
           <div className="px-5 py-4 border-b border-line">
             <p className="m-0 text-sm text-ink-muted mb-2">Approvals</p>
             <ol className="list-none m-0 p-0 flex flex-col gap-2 text-sm">
@@ -249,6 +222,50 @@ export function ApprovalDetail() {
             )}
           </div>
         </aside>
+        <div className="flex flex-col gap-6 lg:col-start-1 lg:row-start-1">
+          <Panel title="Request">
+            <DescriptionList
+              items={[
+                ["What", r.title],
+                ["Why", r.reason],
+                ["Cost centre", r.costCentre],
+                ["Requested by", `${PEOPLE[r.requester].name}, ${PEOPLE[r.requester].role}`],
+              ]}
+            />
+          </Panel>
+          {sup && (
+            <Panel title="Supplier due diligence">
+              <div className="flex flex-col gap-4 text-sm">
+                <DescriptionList
+                  items={[
+                    ["Supplier", <Link to={`/suppliers/${sup.id}`} className="text-petrol underline underline-offset-4">{sup.name}</Link>],
+                    ["Country, industry", `${sup.country}, ${sup.industry}`],
+                    ["Assessed", sup.assessedOn ? `${formatDate(sup.assessedOn)} by compliance` : "Not yet"],
+                    ["Re-assessment due", sup.reassessBy ? formatDate(sup.reassessBy) : "Not set"],
+                  ]}
+                />
+                {sup.riskReason && (
+                  <div>
+                    <p className="m-0 font-semibold">Why this risk level</p>
+                    <p className="m-0">{sup.riskReason}</p>
+                  </div>
+                )}
+                {sup.mitigation && (
+                  <div>
+                    <p className="m-0 font-semibold">Open mitigation</p>
+                    <p className="m-0">
+                      {sup.mitigation.measure}. Owner {sup.mitigation.owner}, due {formatDate(sup.mitigation.due)}.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </Panel>
+          )}
+          <Panel title="History">
+            <Timeline items={requestHistory(r, state.audit)} />
+          </Panel>
+        </div>
+
       </div>
 
       <Dialog open={!!decision} onClose={() => setDecision(null)} title={copy?.title ?? ""} describedBy={descId}>

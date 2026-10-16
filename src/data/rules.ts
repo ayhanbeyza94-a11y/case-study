@@ -55,6 +55,13 @@ export const formatEUR = (n: number) =>
   // English UI: €31,750. (de-DE would give "31.750 €", which clashed with copy like "over €25,000".)
   new Intl.NumberFormat("en-IE", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(n);
 
+/** Whole days from today to an ISO date (negative = overdue). */
+export const daysUntil = (iso: string) => Math.ceil((new Date(iso + "T23:59:59").getTime() - Date.now()) / 864e5);
+export const neededByLabel = (iso: string) => {
+  const d = daysUntil(iso);
+  return d < 0 ? `${formatDate(iso)} (overdue by ${-d} days)` : d === 0 ? `${formatDate(iso)} (today)` : `${formatDate(iso)} (in ${d} days)`;
+};
+
 export const formatDate = (iso: string) =>
   new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" }).format(new Date(iso));
 
