@@ -193,7 +193,7 @@ export function NewRequest() {
                 />
               )}
             </Field>
-            <Field label="Cost centre" error={errors.costCentre}>
+            <Field label="Cost centre" hint="The budget that pays for this." error={errors.costCentre}>
               {({ id, describedBy, invalid }) => (
                 <Select id={id} data-field="costCentre" aria-describedby={describedBy} aria-invalid={invalid} value={draft.costCentre} onChange={(e) => set("costCentre", e.target.value)}>
                   <option value="">Choose a cost centre</option>
