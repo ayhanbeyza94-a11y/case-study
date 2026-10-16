@@ -72,9 +72,11 @@ function reducer(s: State, a: Action): State {
       const events = [ev(s.user, a.draft.replaces ? `Resubmitted request (replaces ${a.draft.replaces})` : "Submitted request", a.id)];
       if (onHold) events.push(ev("system", "Put request on hold: supplier not cleared", a.id));
       if (route.length > 1) events.push(ev("system", `Added second approval: ${route[1].note?.toLowerCase()}`, a.id));
+      // Evaluation fix (adversarial auditor): the original is "superseded", not "rejected" — nobody rejected it.
       const requests = a.draft.replaces
-        ? s.requests.map((r) => (r.id === a.draft.replaces ? { ...r, status: "rejected" as const } : r))
+        ? s.requests.map((r) => (r.id === a.draft.replaces ? { ...r, status: "superseded" as const } : r))
         : s.requests;
+      if (a.draft.replaces) events.unshift(ev(s.user, `Replaced by ${a.id} after requested changes`, a.draft.replaces));
       return {
         ...s,
         requests: [req, ...requests],

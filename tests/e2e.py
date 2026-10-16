@@ -75,6 +75,19 @@ with sync_playwright() as p:
 
     check("Flow A: changes requested returns request to requester with reason", flow_a_changes)
 
+    def flow_a_resubmit():
+        as_(page, "lena", "/requests/PR-2026-0318")
+        page.get_by_role("link", name="Edit and resubmit").click()
+        page.wait_for_timeout(200)
+        page.get_by_role("button", name="Continue to review").click()
+        page.get_by_role("button", name="Resubmit request").click()
+        as_(page, "lena", "/requests/PR-2026-0318")
+        expect(page.get_by_text("This version was replaced")).to_be_visible()
+        expect(page.get_by_text("Request status: Replaced")).to_be_visible()
+        expect(page.get_by_text("Request status: Rejected")).to_have_count(0)
+
+    check("Rule: a resubmitted request marks the original as replaced, not rejected", flow_a_resubmit)
+
     def flow_a_sod():
         as_(page, "markus", "/requests/new")
         page.get_by_label("What do you want to buy?").fill("Finance BI dashboard seats")

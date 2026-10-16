@@ -7,7 +7,8 @@ export type RequestStatus =
   | "changes-requested"
   | "approved"
   | "rejected"
-  | "on-hold";
+  | "on-hold"
+  | "superseded";
 
 export type PersonId = "lena" | "markus" | "aylin" | "jonas";
 

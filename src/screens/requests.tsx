@@ -373,6 +373,7 @@ export function RequestDetail() {
           )}
           {r.status === "approved" && <Notice tone="success" title="Approved. Raise the purchase order in the ERP with this request number." />}
           {r.status === "rejected" && <Notice tone="error" title="This request was rejected. The reason is in the history below." />}
+          {r.status === "superseded" && <Notice tone="info" title="This version was replaced after changes were requested. The history shows the new request number." />}
           <Panel title="Details">
             <DescriptionList
               items={[

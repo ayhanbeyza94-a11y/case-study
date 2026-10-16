@@ -132,6 +132,7 @@ const REQUEST_STATUS: Record<RequestStatus, { label: string; cls: string; shape:
   approved: { label: "Approved", cls: "bg-risk-low-tint text-risk-low", shape: "circle" },
   rejected: { label: "Rejected", cls: "bg-risk-high-tint text-risk-high", shape: "cross" },
   "on-hold": { label: "On hold", cls: "bg-risk-medium-tint text-risk-medium", shape: "pause" },
+  superseded: { label: "Replaced", cls: "text-ink-muted border border-line", shape: "ring" },
 };
 export function RequestStatusTag({ status }: { status: RequestStatus }) {
   const s = REQUEST_STATUS[status];
